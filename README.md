@@ -6,7 +6,7 @@ Lando Akmalkane Airell M - 2406450390
 
 Evandra Rasya Fadhillah - 2406450352
 
-[ReadPPT](./VCT-Database.pdf)
+[ViewToOpenPPT](./VCT-Database.pdf)
 
 ## 1. Executive Overview
 Short, punchy description of your project. Explain the core problem it solves and why a dual-NoSQL database approach was chosen for handling VCT player data.
@@ -77,3 +77,14 @@ docker-compose exec api-server npm run seed
 
 # 4. Execute the automated performance evaluation load test tool
 node benchmarks/load_test.js
+
+## 7. Licensing & Disclaimers
+
+### Disclaimer
+[cite_start]This software repository and its associated documentation are developed strictly as an academic project submission for the Database System and Laboratory (ENCE614016) course at the University of Indonesia[cite: 1, 2].
+
+* **Trademark & Content Ownership:** All Valorant Champions Tour (VCT) assets, game elements, player in-game names (IGNs), real names, team branding, and signature character/agent designs utilized in this application are the sole property of Riot Games and their respective intellectual property owners. This project is entirely non-commercial and built solely for educational evaluation purposes.
+* [cite_start]**Academic Integrity Compliance:** In accordance with university academic integrity mandates, all utilization of external open-source utility dependencies, frameworks, and generative AI assistants has been explicitly declared and verified within this project blueprint[cite: 49, 50]. This repository is archived for evaluation and grading benchmarking historical records.
+
+### License
+Distributed under the [MIT LICENSE](LICENSE).
