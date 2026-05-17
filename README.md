@@ -78,6 +78,8 @@ docker-compose exec api-server npm run seed
 # 4. Execute the automated performance evaluation load test tool
 node benchmarks/load_test.js
 
+---
+
 ## 7. Licensing & Disclaimers
 
 ### Disclaimer
