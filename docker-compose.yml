@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  mongo-db:
+    image: mongo:6.0
+    container_name: vlr_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis-cache:
+    image: redis:7.2-alpine
+    container_name: vlr_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+
+  api-server:
+    image: node:20-alpine
+    container_name: vlr_api
+    restart: always
+    working_dir: /usr/src/app
+    volumes:
+      - ./:/usr/src/app
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URI=mongodb://mongo-db:27017/vlr_analytics
+      - REDIS_URL=redis://redis-cache:6379
+    depends_on:
+      - mongo-db
+      - redis-cache
+    command: sh -c "npm install && node server.js"
+
+volumes:
+  mongo_data:

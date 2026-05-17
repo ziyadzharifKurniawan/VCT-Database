@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VCT NoSQL Analytical Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0c0f12; color: #f5f7fa; padding: 40px; margin: 0; }
+        .wrapper { max-width: 1200px; margin: 0 auto; }
+        header { border-bottom: 2px solid #1f2937; padding-bottom: 20px; margin-bottom: 30px; }
+        h1 { color: #ff4655; margin: 0; font-size: 32px; letter-spacing: 0.5px; }
+        .grid { display: grid; grid-template-columns: 1.6fr 1.1fr; gap: 40px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 25px; }
+        h2 { margin-top: 0; color: #58a6ff; font-size: 20px; border-bottom: 1px solid #21262d; padding-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid #21262d; }
+        th { color: #8b949e; font-weight: 600; font-size: 13px; text-transform: uppercase; }
+        .search-container { display: flex; gap: 12px; margin-bottom: 25px; }
+        input { flex: 1; background: #0d1117; border: 1px solid #30363d; padding: 12px; color: white; border-radius: 6px; font-size: 15px; }
+        button { background: #ff4655; color: white; border: none; padding: 12px 24px; font-weight: bold; cursor: pointer; border-radius: 6px; font-size: 14px; transition: background 0.2s; }
+        button:hover { background: #d63c48; }
+        .inspector-box { background: #0d1117; padding: 20px; border-radius: 6px; border-left: 5px solid #ff4655; display: none; }
+        .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; background: #238636; color: white; }
+        .badge.redis { background: #da1007; }
+        .stat-line { margin: 12px 0; font-size: 15px; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+            <h1>VCT Analytics Interface</h1>
+            <p style="color: #8b949e; margin: 6px 0 0 0;">Dual-NoSQL Optimization Sandbox Cluster (ENCE614016)</p>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Live Performance Ladder (Calculated via Redis ZSET Index)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank Placement</th>
+                            <th>Player Call Sign</th>
+                            <th>Average Combat Score (ACS)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-view">
+                        <tr><td colspan="3" style="color: #8b949e;">No standings computed. Run data seed script.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Real-Time Storage Cache Inspector</h2>
+                <p style="color: #8b949e; font-size: 14px; margin-bottom: 20px;">Query a player to watch data transition between your primary storage engine and your memory cache layer.</p>
+                <div class="search-container">
+                    <input type="text" id="target-ign" placeholder="Ex: TenZ, aspas, something...">
+                    <button onclick="queryPlayerProfile()">Search Profile</button>
+                </div>
+                
+                <div id="inspector-display" class="inspector-box">
+                    <div style="margin-bottom: 15px;">
+                        <span style="font-weight: 600; color: #8b949e; margin-right: 10px;">Data Origin:</span>
+                        <span id="data-source-badge" class="badge">None</span>
+                    </div>
+                    <div class="stat-line"><strong>IGN Profile:</strong> <span id="stat-ign" style="color: #58a6ff; font-weight: bold;"></span></div>
+                    <div class="stat-line"><strong>Active Roster:</strong> <span id="stat-team"></span></div>
+                    <div class="stat-line"><strong>Signature Agents:</strong> <span id="stat-agents" style="color: #ffca28;"></span></div>
+                    <div class="stat-line"><strong>Combat ACS Rating:</strong> <span id="stat-acs"></span></div>
+                    <div class="stat-line"><strong>Kill/Death Metrics:</strong> <span id="stat-kd"></span> (<span id="stat-kddiff"></span>)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchSystemStandings() {
+            try {
+                const response = await fetch('/api/leaderboard');
+                const standings = await response.json();
+                const viewTarget = document.getElementById('leaderboard-view');
+                
+                if (!standings.length) return;
+                
+                viewTarget.innerHTML = standings.map((entry, index) => `
+                    <tr>
+                        <td><strong>#${index + 1}</strong></td>
+                        <td style="font-weight: 600;">${entry.value}</td>
+                        <td style="color: #ff4655; font-weight: bold;">${entry.score}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Standings lookup interrupt encountered.");
+            }
+        }
+
+        async function queryPlayerProfile() {
+            const queryParam = document.getElementById('target-ign').value.trim();
+            if (!queryParam) return alert("Please specify an explicit target player name.");
+
+            try {
+                const response = await fetch(`/api/player/${encodeURIComponent(queryParam)}`);
+                if (response.status === 404) return alert("Target profile not found within data registry.");
+                
+                const body = await response.json();
+                const data = body.data;
+
+                document.getElementById('inspector-display').style.display = 'block';
+                
+                // Track backend request origin routing indicators
+                const badgeElement = document.getElementById('data-source-badge');
+                badgeElement.innerText = body.source;
+                badgeElement.className = body.source.includes('Redis') ? "badge redis" : "badge";
+
+                // Map data elements to screen elements
+                document.getElementById('stat-ign').innerText = data.ign;
+                document.getElementById('stat-team').innerText = data.team || "Free Agent";
+                document.getElementById('stat-agents').innerText = Array.isArray(data.agents) ? data.agents.join(', ') : data.agents;
+                document.getElementById('stat-acs').innerText = data.acs || data.historicalStats.acs;
+                document.getElementById('stat-kd').innerText = data.kd || data.historicalStats.kd;
+                
+                const rawDiff = data.kdDiff !== undefined ? data.kdDiff : data.historicalStats.kdDiff;
+                document.getElementById('stat-kddiff').innerText = rawDiff >= 0 ? `+${rawDiff}` : rawDiff;
+            } catch (err) {
+                alert("Network operational fault detected while communicating with API endpoints.");
+            }
+        }
+
+        // Initialize state on browser canvas frame initialization
+        fetchSystemStandings();
+    </script>
+</body>
+</html>
