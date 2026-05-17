@@ -1,4 +1,4 @@
-# VCT Live Analytics and Real-Time Leaderboard Engine\
+# VCT Live Analytics and Real-Time Leaderboard Engine
 
 Ziyadzharif Alfarabi Kurniawan- 2406369053
 
@@ -7,6 +7,7 @@ Lando Akmalkane Airell M - 2406450390
 Evandra Rasya Fadhillah - 2406450352
 
 [ViewToOpenPPT](./VCT-Database.pdf)
+### NOTE: Results docker are a bit broken so it hasnt been fully realized there ###
 
 ## 1. Executive Overview
 Short, punchy description of your project. Explain the core problem it solves and why a dual-NoSQL database approach was chosen for handling VCT player data.
