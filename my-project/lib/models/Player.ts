@@ -1,12 +1,19 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, type InferSchemaType, type Model } from 'mongoose';
 
-const playerSchema = new mongoose.Schema({
+const playerSchema = new Schema({
   ign: { type: String, required: true, unique: true },
-  team: String,
-  agents: [String],
-  historicalStats: { acs: Number, kd: Number, kdDiff: Number },
+  team: { type: String, required: true },
+  agents: [{ type: String, required: true }],
+  historicalStats: {
+    acs: { type: Number, required: true },
+    kd: { type: Number, required: true },
+    kdDiff: { type: Number, required: true },
+  },
   lastUpdated: { type: Date, default: Date.now },
 });
 
-export const Player =
-  mongoose.models.Player || mongoose.model('Player', playerSchema);
+export type PlayerRecord = InferSchemaType<typeof playerSchema>;
+
+export const Player: Model<PlayerRecord> =
+  (mongoose.models.Player as Model<PlayerRecord> | undefined) ??
+  mongoose.model<PlayerRecord>('Player', playerSchema);

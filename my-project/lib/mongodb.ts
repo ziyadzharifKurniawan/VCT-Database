@@ -1,13 +1,26 @@
-import mongoose from 'mongoose';
+import mongoose, { type Mongoose } from 'mongoose';
 
-const MONGO_URI = process.env.MONGO_URI as string;
+const MONGO_URI = process.env.MONGO_URI;
 
-let cached = (global as any).__mongo ?? { conn: null, promise: null };
-(global as any).__mongo = cached;
+type CachedMongoConnection = {
+  conn: Mongoose | null;
+  promise: Promise<Mongoose> | null;
+};
+
+declare global {
+  var __mongo: CachedMongoConnection | undefined;
+}
+
+const cached = globalThis.__mongo ?? { conn: null, promise: null };
+globalThis.__mongo = cached;
 
 export async function connectDB() {
+  if (!MONGO_URI) {
+    throw new Error('MONGO_URI is not configured');
+  }
+
   if (cached.conn) return cached.conn;
-  if (!cached.promise) cached.promise = mongoose.connect(MONGO_URI);
+  cached.promise ??= mongoose.connect(MONGO_URI);
   cached.conn = await cached.promise;
   return cached.conn;
 }

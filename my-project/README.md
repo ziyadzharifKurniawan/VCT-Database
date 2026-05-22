@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VCT Live Analytics
 
-## Getting Started
+A small Next.js dashboard for demonstrating a database system with a persistent MongoDB layer and a Redis speed layer. The app tracks VCT-style player profiles, filtered leaderboards, cache-backed player lookup, and recent match history.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- ACS leaderboard ranked with a Redis sorted set.
+- Team, agent, and stat filters on the leaderboard.
+- Player lookup with cache-aside Redis HASH storage.
+- VLR.gg-derived match history/event names stored in MongoDB and cached per player in Redis.
+- One-click seed endpoint for repeatable demos.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  UI["Next.js App UI"] --> API["Route Handlers"]
+  API --> Mongo["MongoDB: Player + MatchHistory"]
+  API --> Redis["Upstash Redis"]
+  Redis --> ZSET["vct:leaderboard:acs"]
+  Redis --> Hash["player:cache:{ign}"]
+  Redis --> MatchCache["player:matches:{ign}"]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+MongoDB is the source of truth for player profiles and match rows. Redis is used for the leaderboard ranking, short-lived player profile cache, and short-lived match history cache.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Install dependencies.
 
-## Learn More
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. Create `.env.local` from `.env.local.example`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```bash
+   cp .env.local.example .env.local
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. Fill in the required values.
 
-## Deploy on Vercel
+   ```env
+   MONGO_URI=mongodb+srv://<user>:<password>@<cluster>/<database>?retryWrites=true&w=majority
+   UPSTASH_REDIS_REST_URL=https://<region>-<id>.upstash.io
+   UPSTASH_REDIS_REST_TOKEN=<token>
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. Start the development server.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000).
+
+## Demo Flow
+
+1. Click `Seed DB`.
+   This clears and recreates the player and match-history demo dataset, then rebuilds the Redis ACS leaderboard.
+
+2. Open `Leaderboard`.
+   Show that Redis provides the ranked order while MongoDB supplies player profile details. Try filtering by team, agent, and sort stat.
+
+3. Open `Player Lookup`.
+   Search for `TenZ`, `aspas`, or `f0rsakeN`. The first lookup should come from MongoDB, and repeated lookups within 60 seconds should come from Redis.
+
+4. Open `Match History`.
+   Select a player and show recent matches, average ACS, win/loss record, and the ACS trend. The first history query reads MongoDB, then Redis caches the result for 60 seconds.
+
+## API Routes
+
+| Route | Method | Purpose |
+| --- | --- | --- |
+| `/api/seed` | `POST` | Seeds players, match history, and Redis leaderboard data. |
+| `/api/leaderboard` | `GET` | Reads ranked IGN values from Redis ZSET and hydrates profiles from MongoDB. |
+| `/api/player/[ign]` | `GET` | Reads a player by IGN using Redis cache-aside with MongoDB fallback. |
+| `/api/player/[ign]/matches` | `GET` | Reads recent match history using Redis cache-aside with MongoDB fallback. |
+
+## Useful Checks
+
+```bash
+npm run lint
+npm run build
+```
+
+PowerShell API smoke checks:
+
+```powershell
+Invoke-RestMethod -Method Post http://localhost:3000/api/seed
+Invoke-RestMethod http://localhost:3000/api/leaderboard
+Invoke-RestMethod http://localhost:3000/api/player/TenZ
+Invoke-RestMethod http://localhost:3000/api/player/TenZ/matches
+```
+
+## Notes
+
+- This project uses Next.js 16 route handlers. Dynamic route `params` are promises, so handler implementations must `await params`.
+- Redis TTLs are intentionally short for demos so cache hits and refresh behavior are easy to observe.
+- Seeded event names, regions, dates, opponents, and source links are based on public VLR.gg pages. Per-player ACS/KDA rows are shaped as deterministic demo samples around each player's aggregate profile.
+- Do not commit real database credentials or Redis tokens. Keep secrets in `.env.local`.
