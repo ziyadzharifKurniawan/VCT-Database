@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import { redis } from '@/lib/redis';
 import { Player } from '@/lib/models/Player';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
-  _req: Request,
-  { params }: { params: { ign: string } }
+  request: NextRequest, 
+  context: { params: Promise<{ ign: string }> } 
 ) {
-  const { ign } = params;
+  const { ign } = await context.params; 
   const cacheKey = `player:cache:${ign.toLowerCase()}`;
 
   try {
